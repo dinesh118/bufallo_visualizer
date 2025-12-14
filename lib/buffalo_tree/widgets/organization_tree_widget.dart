@@ -35,6 +35,7 @@ class _OrganizationTreeWidgetState extends State<OrganizationTreeWidget> {
       TransformationController();
   double? _lastRootX;
   double? _lastRootY;
+  Offset? _hoverPosition;
 
   @override
   void initState() {
@@ -239,6 +240,9 @@ class _OrganizationTreeWidgetState extends State<OrganizationTreeWidget> {
           onTapUp: (details) {
             _handleTapWithTransform(details.localPosition);
           },
+          onLongPressStart: (details) {
+            _handleLongPress(details.localPosition);
+          },
           child: InteractiveViewer(
             transformationController: _transformationController,
             boundaryMargin: const EdgeInsets.all(500),
@@ -275,6 +279,8 @@ class _OrganizationTreeWidgetState extends State<OrganizationTreeWidget> {
                       ),
                     ),
                   ),
+                  if (hoveredNodeId != null && _hoverPosition != null)
+                    _buildTooltip(),
                 ],
               ),
             ),
@@ -306,17 +312,153 @@ class _OrganizationTreeWidgetState extends State<OrganizationTreeWidget> {
 
   void _handleHover(Offset position) {
     String? newHoveredId;
+    Offset? newHoverPosition;
+
     for (var posNode in positionedNodes) {
       if (posNode.rect.contains(position)) {
         newHoveredId = posNode.node.id;
+        // Position tooltip at top-right of node
+        newHoverPosition = posNode.rect.topRight;
         break;
       }
     }
+
     if (newHoveredId != hoveredNodeId) {
       setState(() {
         hoveredNodeId = newHoveredId;
+        _hoverPosition = newHoverPosition;
       });
     }
+  }
+
+  void _handleLongPress(Offset localPosition) {
+    final Matrix4 transform = _transformationController.value;
+    final Matrix4 inverseTransform = Matrix4.inverted(transform);
+    final Vector3 canvasPoint = inverseTransform.transform3(
+      Vector3(localPosition.dx, localPosition.dy, 0),
+    );
+    final Offset canvasPosition = Offset(canvasPoint.x, canvasPoint.y);
+
+    for (var posNode in positionedNodes) {
+      if (posNode.rect.contains(canvasPosition)) {
+        _showNodeDetailsDialog(posNode.node);
+        return;
+      }
+    }
+  }
+
+  void _showNodeDetailsDialog(BuffaloNode node) {
+    // Calculate simple stats derived from the node itself
+    final childrenCount = node.children.length;
+    // Estimate logical revenue/value based on age/status for display purposes
+    // Since we don't have the full financial model here, we infer
+    final isMature = node.data['status'] == 'Mature';
+    final estValue = isMature
+        ? '₹1,50,000'
+        : '₹60,000'; // Placeholder logic based on status
+    final currentRevenue = isMature ? '₹12,000/yr' : '₹0/yr';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${node.name.split('\n').first} Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDialogRow('Generation', '${node.generation}'),
+            _buildDialogRow('Unit', '${node.unit}'),
+            const Divider(),
+            if (node.data.isNotEmpty) ...[
+              _buildDialogRow('Type', node.data['type']),
+              _buildDialogRow('Age', node.data['age']),
+              _buildDialogRow('Status', node.data['status']),
+              _buildDialogRow(
+                'Production',
+                // If status is Mature, it's Producing, otherwise Non-Producing
+                node.data['status'] == 'Mature' ? 'Producing' : 'Non-Producing',
+              ),
+              _buildDialogRow('Description', node.data['desc']),
+            ],
+            const Divider(),
+            _buildDialogRow('Children Count', '$childrenCount'),
+            _buildDialogRow('Est. Market Value', estValue),
+            _buildDialogRow('Current Revenue', currentRevenue),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogRow(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Text(value?.toString() ?? 'N/A'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTooltip() {
+    final node = positionedNodes
+        .firstWhere((p) => p.node.id == hoveredNodeId)
+        .node;
+    if (node.data.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      left: _hoverPosition!.dx + 10,
+      top: _hoverPosition!.dy - 10,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 4,
+              offset: Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              node.data['type'] ?? 'Buffalo',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Age: ${node.data['age']}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            Text(
+              '${node.data['status']}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -345,126 +487,127 @@ class _NodeTextPainter extends CustomPainter {
     // Get the proper text area for the shape
     final textArea = NodeShapeData.getTextArea(nodeShape, rect);
 
-    // Determine text color based on theme - always use high contrast colors
-    final textColor = _isLightTheme() ? Colors.black87 : Colors.white;
-    final shadowColor = _isLightTheme() ? Colors.white70 : Colors.black87;
+    // Determine text color based on node color luminance
+    final nodeColor = _getNodeColor(node.generation);
+    // Use a higher threshold for better readability on mid-tones
+    final isDarkBackground = nodeColor.computeLuminance() < 0.6;
 
-    // Adjust font sizes based on shape - increased for better visibility
-    final nameFontSize = nodeShape == NodeShape.circle ? 16.0 : 18.0;
-    final yearFontSize = nodeShape == NodeShape.circle ? 12.0 : 14.0;
-    final genFontSize = nodeShape == NodeShape.circle ? 11.0 : 12.0;
+    final textColor = isDarkBackground
+        ? Colors.white
+        : Colors.black.withOpacity(0.9);
+    final shadowColor = isDarkBackground
+        ? Colors.black.withOpacity(0.5)
+        : Colors.white.withOpacity(0.6);
 
-    // Draw year and generation only - show simulation year for founders
-    final displayYear = node.generation == 0
-        ? node.birthYear + 3
-        : node.birthYear;
-    final yearText = nodeShape == NodeShape.circle
-        ? '$displayYear'
-        : 'Year $displayYear';
+    // 1. Draw Name (Center)
+    final nameTitleFontSize = 14.0;
+    final unitFontSize = 9.0;
+
+    // Split "A1\nUnit 1"
+    final nameParts = node.name.split('\n');
+    final mainName = nameParts.isNotEmpty ? nameParts[0] : node.name;
+    final subName = nameParts.length > 1 ? nameParts[1] : '';
+
     final nameSpan = TextSpan(
-      text: yearText,
-      style: TextStyle(
-        color: textColor,
-        fontSize: nameFontSize,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 0.5,
-        shadows: [
-          Shadow(offset: Offset(1, 1), blurRadius: 4, color: shadowColor),
-          Shadow(offset: Offset(-1, -1), blurRadius: 4, color: shadowColor),
-          Shadow(offset: Offset(1, -1), blurRadius: 4, color: shadowColor),
-          Shadow(offset: Offset(-1, 1), blurRadius: 4, color: shadowColor),
+      children: [
+        TextSpan(
+          text: mainName,
+          style: TextStyle(
+            color: textColor,
+            fontSize: nameTitleFontSize,
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                offset: Offset(0.5, 0.5),
+                blurRadius: 1,
+                color: shadowColor,
+              ),
+            ],
+          ),
+        ),
+        if (subName.isNotEmpty) ...[
+          const TextSpan(text: '\n'),
+          TextSpan(
+            text: subName,
+            style: TextStyle(
+              color: textColor.withOpacity(0.9),
+              fontSize: unitFontSize,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
         ],
-      ),
+      ],
     );
+
     final namePainter = TextPainter(
       text: nameSpan,
       textDirection: TextDirection.ltr,
-      maxLines: 1,
-      ellipsis: '...',
       textAlign: TextAlign.center,
+      maxLines: 2,
     );
     namePainter.layout(maxWidth: textArea.width);
 
-    // Center the year text
+    // Center vertically
     final nameX = textArea.left + (textArea.width - namePainter.width) / 2;
-    final nameY = textArea.top + 12;
+    final nameY = textArea.top + (textArea.height - namePainter.height) / 2 - 4;
     namePainter.paint(canvas, Offset(nameX, nameY));
 
-    // Draw generation badge (only for rectangle and pill)
-    if (nodeShape != NodeShape.circle) {
-      final genText = 'Gen ${node.generation}';
-      final genSpan = TextSpan(
-        text: genText,
-        style: TextStyle(
-          color: textColor,
-          fontSize: genFontSize,
-          fontWeight: FontWeight.w600,
-          shadows: [
-            Shadow(offset: Offset(0.5, 0.5), blurRadius: 2, color: shadowColor),
-          ],
-        ),
-      );
-      final genPainter = TextPainter(
-        text: genSpan,
-        textDirection: TextDirection.ltr,
-      );
-      genPainter.layout();
+    // 2. Draw Year (Bottom Left)
+    final infoFontSize = 9.0;
+    final displayYear = node.generation == 0
+        ? node.birthYear + 3
+        : node.birthYear;
 
-      // Draw badge background
-      final badgeRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          rect.right - genPainter.width - 16,
-          rect.top + 8,
-          genPainter.width + 10,
-          18,
-        ),
-        const Radius.circular(9),
-      );
-      final badgePaint = Paint()
-        ..color = Colors.white.withOpacity(0.25)
-        ..style = PaintingStyle.fill;
+    final yearSpan = TextSpan(
+      text: '$displayYear',
+      style: TextStyle(
+        color: textColor.withOpacity(0.9),
+        fontSize: infoFontSize,
+        fontWeight: FontWeight.w600,
+        shadows: [
+          Shadow(offset: Offset(0.5, 0.5), blurRadius: 1, color: shadowColor),
+        ],
+      ),
+    );
+    final yearPainter = TextPainter(
+      text: yearSpan,
+      textDirection: TextDirection.ltr,
+    );
+    yearPainter.layout();
 
-      canvas.drawRRect(badgeRect, badgePaint);
+    final yearX = textArea.left + 4;
+    final yearY = textArea.bottom - yearPainter.height - 2;
+    yearPainter.paint(canvas, Offset(yearX, yearY));
 
-      genPainter.paint(
-        canvas,
-        Offset(rect.right - genPainter.width - 10, rect.top + 10),
-      );
-    }
+    // 4. Draw Generation (Top Right)
+    final genFontSize = 7.0;
+    final genText = 'Gen ${node.generation}';
+    final genSpan = TextSpan(
+      text: genText,
+      style: TextStyle(
+        color: textColor.withOpacity(0.8),
+        fontSize: genFontSize,
+        fontWeight: FontWeight.w600,
+        shadows: [
+          Shadow(offset: Offset(0.5, 0.5), blurRadius: 1, color: shadowColor),
+        ],
+      ),
+    );
+    final genPainter = TextPainter(
+      text: genSpan,
+      textDirection: TextDirection.ltr,
+    );
+    genPainter.layout();
 
-    // Draw children count with icon (simplified for circle)
-    if (node.children.isNotEmpty) {
-      final countText = nodeShape == NodeShape.circle
-          ? '${node.children.length}'
-          : '🐃 ${node.children.length} ${node.children.length == 1 ? 'child' : 'children'}';
-      final countSpan = TextSpan(
-        text: countText,
-        style: TextStyle(
-          color: textColor,
-          fontSize: yearFontSize,
-          fontWeight: FontWeight.w600,
-          shadows: [
-            Shadow(offset: Offset(0.5, 0.5), blurRadius: 2, color: shadowColor),
-          ],
-        ),
-      );
-      final countPainter = TextPainter(
-        text: countSpan,
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.center,
-      );
-      countPainter.layout();
-
-      final countX = textArea.left + (textArea.width - countPainter.width) / 2;
-      final countY = textArea.bottom - countPainter.height - 4;
-      countPainter.paint(canvas, Offset(countX, countY));
-    }
+    final genX = textArea.right - genPainter.width - 4;
+    final genY = textArea.top + 4;
+    genPainter.paint(canvas, Offset(genX, genY));
   }
 
-  bool _isLightTheme() {
-    // Check if background is light (for pastel and earthy themes)
-    final bgLuminance = themeData.backgroundColor.computeLuminance();
-    return bgLuminance > 0.5;
+  Color _getNodeColor(int generation) {
+    final palette = themeData
+        .generationPalettes[generation % themeData.generationPalettes.length];
+    return palette[0];
   }
 
   @override
@@ -506,13 +649,13 @@ class BuffaloTreeCanvasPainter extends CustomPainter {
           ).createShader(
             Rect.fromLTRB(0, 0, 800, 600),
           ) // Approximate canvas bounds
-      ..strokeWidth = 4.5
+      ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
     final shadowPaint = Paint()
       ..color = Colors.blue.withOpacity(0.1)
-      ..strokeWidth = 8
+      ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
 
     for (final connection in connections) {
@@ -580,8 +723,8 @@ class BuffaloTreeCanvasPainter extends CustomPainter {
 
     final normalizedDir = dir / length;
 
-    const double arrowLength = 16;
-    const double arrowWidth = 18;
+    const double arrowLength = 8;
+    const double arrowWidth = 10;
 
     final base = endPoint - normalizedDir * arrowLength;
     final perp = Offset(-normalizedDir.dy, normalizedDir.dx);
@@ -756,22 +899,10 @@ class BuffaloTreeCanvasPainter extends CustomPainter {
       );
     }
 
-    // Create gradient background based on generation
-    final gradientColors = _getGradientColors(node.generation);
+    // Use solid color based on generation
+    final nodeColor = _getNodeColor(node.generation);
     final bgPaint = Paint()
-      ..shader = LinearGradient(
-        colors: isHovered
-            ? [
-                gradientColors[0].withOpacity(0.9),
-                gradientColors[1].withOpacity(0.9),
-              ]
-            : [
-                gradientColors[0].withOpacity(0.7),
-                gradientColors[1].withOpacity(0.7),
-              ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(rect)
+      ..color = isHovered ? nodeColor : nodeColor.withOpacity(0.9)
       ..style = PaintingStyle.fill;
 
     // Draw the main shape
@@ -808,18 +939,11 @@ class BuffaloTreeCanvasPainter extends CustomPainter {
       );
     }
 
-    // Draw border
+    // Draw border with solid color
     final borderPaint = Paint()
-      ..shader = LinearGradient(
-        colors: isHovered
-            ? [gradientColors[0], gradientColors[1]]
-            : [
-                gradientColors[0].withOpacity(0.8),
-                gradientColors[1].withOpacity(0.8),
-              ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(rect)
+      ..color = isHovered
+          ? nodeColor.withOpacity(1.0)
+          : nodeColor.withOpacity(0.8)
       ..style = PaintingStyle.stroke
       ..strokeWidth = isHovered ? 2.0 : 1.5;
 
@@ -835,74 +959,15 @@ class BuffaloTreeCanvasPainter extends CustomPainter {
     }
 
     // Draw node text
-    _drawNodeText(canvas, posNode);
+    // Draw node text
+    // _drawNodeText(canvas, posNode); // Removed as redundant
   }
 
-  void _drawNodeText(Canvas canvas, PositionedNode posNode) {
-    final node = posNode.node;
-    final rect = posNode.rect;
-    final isCircle = nodeShape == NodeShape.circle;
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
-
-    // Configure text style based on node shape
-    final textStyle = TextStyle(
-      color: _isLightTheme() ? Colors.black87 : Colors.white,
-      fontSize: isCircle ? 12.0 : 14.0,
-      fontWeight: FontWeight.w500,
-    );
-
-    // Create text span with the node's identification
-    final textSpan = TextSpan(text: node.id, style: textStyle);
-
-    // Layout the text
-    textPainter.text = textSpan;
-    textPainter.layout(minWidth: 0, maxWidth: rect.width * 0.9);
-
-    // Calculate text position
-    double dx, dy;
-    if (isCircle) {
-      // Center text in circle
-      dx = rect.left + (rect.width - textPainter.width) / 2;
-      dy = rect.top + (rect.height - textPainter.height) / 2;
-    } else {
-      // Position text in rectangle
-      dx = rect.left + (rect.width - textPainter.width) / 2;
-      dy = rect.top + 12; // Add some padding from top
-    }
-
-    // Draw the text
-    // textPainter.paint(canvas, Offset(dx, dy));
-
-    // Draw generation text if not a circle
-    // if (!isCircle) {
-    //   final genText = 'G${node.generation}';
-    //   final genStyle = TextStyle(color: Colors.black54, fontSize: 11.0);
-    //   final genPainter = TextPainter(
-    //     text: TextSpan(text: genText, style: genStyle),
-    //     textDirection: TextDirection.ltr,
-    //     textAlign: TextAlign.center,
-    //   );
-    //   genPainter.layout();
-
-    //   final genDx = rect.left + (rect.width - genPainter.width) / 2;
-    //   final genDy = dy + textPainter.height + 2; // Small gap between texts
-    //   genPainter.paint(canvas, Offset(genDx, genDy));
-    // }
-  }
-
-  bool _isLightTheme() {
-    // Check if the current theme is light
-    final brightness =
-        themeData.backgroundColor == Colors.black ?? Brightness.light;
-    return brightness == Brightness.light;
-  }
-
-  List<Color> _getGradientColors(int generation) {
-    return themeData.generationPalettes[generation %
-        themeData.generationPalettes.length];
+  Color _getNodeColor(int generation) {
+    // Use the first color of the palette for a solid look, but ensure it's vibrant
+    final palette = themeData
+        .generationPalettes[generation % themeData.generationPalettes.length];
+    return palette[0];
   }
 
   @override

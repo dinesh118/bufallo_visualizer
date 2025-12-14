@@ -35,6 +35,9 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
       return const Center(child: Text('No data available'));
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
@@ -45,36 +48,39 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
             Center(
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Herd Performance Analysis',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 20),
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.blue[200]!),
+                      border: Border.all(
+                        color: isDark ? Colors.blue[700]! : Colors.blue[200]!,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Show Breakdown',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Switch(
                           value: _showProducingBreakdown,
                           onChanged: (value) {
-                            setState(
-                                () => _showProducingBreakdown = value);
+                            setState(() => _showProducingBreakdown = value);
                           },
                           activeColor: Colors.green,
                         ),
@@ -89,18 +95,21 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
             // Total Buffalo Growth Chart
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey[300]!),
+                color: isDark ? Colors.grey[850] : Colors.white,
+                border: Border.all(
+                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Total Buffalo Population Growth',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -110,8 +119,7 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
                       tooltipBehavior: _tooltipBehavior,
                       primaryXAxis: CategoryAxis(),
                       primaryYAxis: NumericAxis(
-                        numberFormat:
-                            NumberFormat.decimalPattern('en_IN'),
+                        numberFormat: NumberFormat.decimalPattern('en_IN'),
                       ),
                       series: <CartesianSeries<ChartData, String>>[
                         LineSeries<ChartData, String>(
@@ -140,22 +148,24 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
             ),
             const SizedBox(height: 32),
 
-            // Production Breakdown (Conditional)
             if (_showProducingBreakdown) ...[
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey[300]!),
+                  color: isDark ? Colors.grey[850] : Colors.white,
+                  border: Border.all(
+                    color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'Production Status Breakdown',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -165,8 +175,7 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
                         tooltipBehavior: _tooltipBehavior,
                         primaryXAxis: CategoryAxis(),
                         primaryYAxis: NumericAxis(
-                          numberFormat:
-                              NumberFormat.decimalPattern('en_IN'),
+                          numberFormat: NumberFormat.decimalPattern('en_IN'),
                         ),
                         series: <CartesianSeries<ChartData, String>>[
                           ColumnSeries<ChartData, String>(
@@ -184,8 +193,8 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
                           ),
                           ColumnSeries<ChartData, String>(
                             dataSource: widget.yearlyData.map((data) {
-                              final total =
-                                  (data['totalBuffaloes'] as num).toDouble();
+                              final total = (data['totalBuffaloes'] as num)
+                                  .toDouble();
                               final producing =
                                   (data['producingBuffaloes'] as num? ?? 0)
                                       .toDouble();
@@ -210,174 +219,240 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
 
             // Performance Metrics Table
             Container(
+              width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey[300]!),
+                color: isDark ? Colors.grey[850] : Colors.white,
+                border: Border.all(
+                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(24),
-                    child: const Text(
+                    child: Text(
                       'Yearly Performance Metrics',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                   ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columnSpacing: 16,
-                      columns: const [
-                        DataColumn(
-                          label: Text(
-                            'Year',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SizedBox(
+                        width: constraints.maxWidth,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth,
                             ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Total Buffaloes',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Producing',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Production %',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'YoY Growth',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                      rows: List.generate(
-                        widget.yearlyData.length,
-                        (index) {
-                          final data = widget.yearlyData[index];
-                          final year = data['year'];
-                          final total = data['totalBuffaloes'] as int;
-                          final producing =
-                              (data['producingBuffaloes'] as int? ?? 0);
-                          final productionPct = total > 0
-                              ? ((producing / total) * 100).toStringAsFixed(1)
-                              : '0.0';
+                            child: DataTable(
+                              headingRowColor: WidgetStateProperty.all(
+                                isDark ? Colors.grey[800] : Colors.blue[50],
+                              ),
+                              dataRowHeight: 70, // Increased cell height
+                              columnSpacing: 16,
+                              columns: [
+                                DataColumn(
+                                  label: Text(
+                                    'Year',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Total Buffaloes',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Producing',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Production %',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'YoY Growth',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              rows: List.generate(widget.yearlyData.length, (
+                                index,
+                              ) {
+                                final data = widget.yearlyData[index];
+                                final year = data['year'];
+                                final total = data['totalBuffaloes'] as int;
+                                final producing =
+                                    (data['producingBuffaloes'] as int? ?? 0);
+                                final productionPct = total > 0
+                                    ? ((producing / total) * 100)
+                                          .toStringAsFixed(1)
+                                    : '0.0';
 
-                          final prevTotal = index > 0
-                              ? widget.yearlyData[index - 1]
-                                  ['totalBuffaloes'] as int
-                              : total;
-                          final growth = index > 0
-                              ? (((total - prevTotal) / prevTotal) * 100)
-                                  .toStringAsFixed(1)
-                              : '0.0';
-                          final growthColor =
-                              double.parse(growth) >= 0
-                                  ? Colors.green
-                                  : Colors.red;
+                                final prevTotal = index > 0
+                                    ? widget.yearlyData[index -
+                                              1]['totalBuffaloes']
+                                          as int
+                                    : total;
+                                final growth = index > 0
+                                    ? (((total - prevTotal) / prevTotal) * 100)
+                                          .toStringAsFixed(1)
+                                    : '0.0';
+                                final growthColor = double.parse(growth) >= 0
+                                    ? Colors.green
+                                    : Colors.red;
 
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Text(
-                                  year.toString(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Container(
-                                  color: Colors.blue[50],
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  child: Text(
-                                    widget.formatNumber(total),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
+                                return DataRow(
+                                  cells: [
+                                    DataCell(
+                                      Text(
+                                        year.toString(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Container(
-                                  color: Colors.green[50],
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  child: Text(
-                                    widget.formatNumber(producing),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: Colors.green[700],
+                                    DataCell(
+                                      Container(
+                                        color: isDark
+                                            ? Colors.blue[900]
+                                            : Colors.blue[50],
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        child: Text(
+                                          widget.formatNumber(total),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? Colors.blue[100]
+                                                : Colors.black,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Container(
-                                  color: Colors.purple[50],
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  child: Text(
-                                    '$productionPct%',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: Colors.purple[700],
+                                    DataCell(
+                                      Container(
+                                        color: isDark
+                                            ? Colors.green[900]
+                                            : Colors.green[50],
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        child: Text(
+                                          widget.formatNumber(producing),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? Colors.green[100]
+                                                : Colors.green[700],
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Container(
-                                  color: growthColor.withOpacity(0.2),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  child: Text(
-                                    '$growth%',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: growthColor,
+                                    DataCell(
+                                      Container(
+                                        color: isDark
+                                            ? Colors.purple[900]
+                                            : Colors.purple[50],
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        child: Text(
+                                          '$productionPct%',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? Colors.purple[100]
+                                                : Colors.purple[700],
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
+                                    DataCell(
+                                      Container(
+                                        color: isDark
+                                            ? growthColor.withValues(alpha: 0.1)
+                                            : growthColor.withValues(
+                                                alpha: 0.2,
+                                              ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        child: Text(
+                                          '$growth%',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color:
+                                                isDark &&
+                                                    growthColor == Colors.green
+                                                ? Colors.green[300]
+                                                : growthColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -385,55 +460,112 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
             const SizedBox(height: 32),
 
             // Summary Statistics
-            Row(
-              children: [
-                Expanded(
-                  child: _summaryCard(
-                    'Starting Herd',
-                    widget.yearlyData.isNotEmpty
-                        ? widget.formatNumber(
-                            widget.yearlyData.first['totalBuffaloes'])
-                        : '0',
-                    Colors.blue,
-                    'Year ${widget.yearlyData.isNotEmpty ? widget.yearlyData.first['year'] : '-'}',
+            isMobile
+                ? GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 1, // ✅ Mobile: single column
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 3.0, // adjust height of card
+                        ),
+                    itemCount: 4,
+                    itemBuilder: (context, index) {
+                      final cards = [
+                        _summaryCard(
+                          'Starting Herd',
+                          widget.yearlyData.isNotEmpty
+                              ? widget.formatNumber(
+                                  widget.yearlyData.first['totalBuffaloes'],
+                                )
+                              : '0',
+                          Colors.blue,
+                          'Year ${widget.yearlyData.isNotEmpty ? widget.yearlyData.first['year'] : '-'}',
+                        ),
+                        _summaryCard(
+                          'Final Herd',
+                          widget.yearlyData.isNotEmpty
+                              ? widget.formatNumber(
+                                  widget.yearlyData.last['totalBuffaloes'],
+                                )
+                              : '0',
+                          Colors.green,
+                          'Year ${widget.yearlyData.isNotEmpty ? widget.yearlyData.last['year'] : '-'}',
+                        ),
+                        _summaryCard(
+                          'Total Growth',
+                          widget.yearlyData.isNotEmpty
+                              ? '${(((widget.yearlyData.last['totalBuffaloes'] as int) / (widget.yearlyData.first['totalBuffaloes'] as int)) * 100 - 100).toStringAsFixed(1)}%'
+                              : '0%',
+                          Colors.purple,
+                          'Over ${widget.yearlyData.length} years',
+                        ),
+                        _summaryCard(
+                          'Avg Production %',
+                          widget.yearlyData.isNotEmpty
+                              ? '${(widget.yearlyData.fold<num>(0, (sum, data) => sum + ((data['producingBuffaloes'] as num? ?? 0) / (data['totalBuffaloes'] as num) * 100)) / widget.yearlyData.length).toStringAsFixed(1)}%'
+                              : '0%',
+                          Colors.orange,
+                          'Average across years',
+                        ),
+                      ];
+
+                      return cards[index];
+                    },
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: _summaryCard(
+                          'Starting Herd',
+                          widget.yearlyData.isNotEmpty
+                              ? widget.formatNumber(
+                                  widget.yearlyData.first['totalBuffaloes'],
+                                )
+                              : '0',
+                          Colors.blue,
+                          'Year ${widget.yearlyData.isNotEmpty ? widget.yearlyData.first['year'] : '-'}',
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: _summaryCard(
+                          'Final Herd',
+                          widget.yearlyData.isNotEmpty
+                              ? widget.formatNumber(
+                                  widget.yearlyData.last['totalBuffaloes'],
+                                )
+                              : '0',
+                          Colors.green,
+                          'Year ${widget.yearlyData.isNotEmpty ? widget.yearlyData.last['year'] : '-'}',
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: _summaryCard(
+                          'Total Growth',
+                          widget.yearlyData.isNotEmpty
+                              ? '${(((widget.yearlyData.last['totalBuffaloes'] as int) / (widget.yearlyData.first['totalBuffaloes'] as int)) * 100 - 100).toStringAsFixed(1)}%'
+                              : '0%',
+                          Colors.purple,
+                          'Over ${widget.yearlyData.length} years',
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: _summaryCard(
+                          'Avg Production %',
+                          widget.yearlyData.isNotEmpty
+                              ? '${(widget.yearlyData.fold<num>(0, (sum, data) => sum + ((data['producingBuffaloes'] as num? ?? 0) / (data['totalBuffaloes'] as num) * 100)) / widget.yearlyData.length).toStringAsFixed(1)}%'
+                              : '0%',
+                          Colors.orange,
+                          'Average across years',
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: _summaryCard(
-                    'Final Herd',
-                    widget.yearlyData.isNotEmpty
-                        ? widget.formatNumber(
-                            widget.yearlyData.last['totalBuffaloes'])
-                        : '0',
-                    Colors.green,
-                    'Year ${widget.yearlyData.isNotEmpty ? widget.yearlyData.last['year'] : '-'}',
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: _summaryCard(
-                    'Total Growth',
-                    widget.yearlyData.isNotEmpty
-                        ? '${(((widget.yearlyData.last['totalBuffaloes'] as int) / (widget.yearlyData.first['totalBuffaloes'] as int)) * 100 - 100).toStringAsFixed(1)}%'
-                        : '0%',
-                    Colors.purple,
-                    'Over ${widget.yearlyData.length} years',
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: _summaryCard(
-                    'Avg Production %',
-                    widget.yearlyData.isNotEmpty
-                        ? '${(widget.yearlyData.fold<num>(0, (sum, data) => sum + ((data['producingBuffaloes'] as num? ?? 0) / (data['totalBuffaloes'] as num) * 100)) / widget.yearlyData.length).toStringAsFixed(1)}%'
-                        : '0%',
-                    Colors.orange,
-                    'Average across years',
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -446,12 +578,22 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
     MaterialColor color,
     String subtitle,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color[50]!, color[100]!],
+        gradient: isDark
+            ? LinearGradient(
+                colors: [
+                  color[900] ?? Colors.grey[900]!,
+                  color[800] ?? Colors.grey[800]!,
+                ],
+              )
+            : LinearGradient(colors: [color[50]!, color[100]!]),
+        border: Border.all(
+          color: isDark
+              ? (color[700] ?? Colors.grey[700]!)
+              : (color[200] ?? Colors.grey[200]!),
         ),
-        border: Border.all(color: color[200]!),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(20),
@@ -462,7 +604,9 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: color[700],
+              color: isDark
+                  ? (color[100] ?? Colors.white)
+                  : (color[700] ?? Colors.black),
             ),
           ),
           const SizedBox(height: 8),
@@ -471,7 +615,9 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: color[800],
+              color: isDark
+                  ? (color[50] ?? Colors.grey[200])
+                  : (color[800] ?? Colors.grey[800]),
             ),
           ),
           const SizedBox(height: 4),
@@ -479,7 +625,9 @@ class _HerdPerformanceWidgetState extends State<HerdPerformanceWidget> {
             subtitle,
             style: TextStyle(
               fontSize: 12,
-              color: color[600],
+              color: isDark
+                  ? (color[200] ?? Colors.grey[400])
+                  : (color[600] ?? Colors.grey[600]),
             ),
           ),
         ],

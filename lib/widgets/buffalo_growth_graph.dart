@@ -4,7 +4,8 @@ import 'package:intl/intl.dart';
 class BuffaloGrowthGraph extends StatelessWidget {
   final List<Map<String, dynamic>> yearlyData;
 
-  const BuffaloGrowthGraph({Key? key, required this.yearlyData}) : super(key: key);
+  const BuffaloGrowthGraph({Key? key, required this.yearlyData})
+    : super(key: key);
 
   String formatNumber(num n) {
     final f = NumberFormat.decimalPattern('en_IN');
@@ -19,6 +20,8 @@ class BuffaloGrowthGraph extends StatelessWidget {
         .map((d) => d['totalBuffaloes'] as num)
         .reduce((a, b) => a > b ? a : b);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -30,11 +33,19 @@ class BuffaloGrowthGraph extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.trending_up, color: Colors.deepPurple, size: 28),
+                const Icon(
+                  Icons.trending_up,
+                  color: Colors.deepPurple,
+                  size: 28,
+                ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Buffalo Population Growth',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
               ],
             ),
@@ -46,28 +57,35 @@ class BuffaloGrowthGraph extends StatelessWidget {
                 final total = data['totalBuffaloes'] as num;
                 final producing = data['producingBuffaloes'] as num? ?? 0;
                 final percentage = (total / maxBuffaloes) * 100;
-                final prevTotal = index > 0 ? yearlyData[index - 1]['totalBuffaloes'] as num : total;
+                final prevTotal = index > 0
+                    ? yearlyData[index - 1]['totalBuffaloes'] as num
+                    : total;
                 final growth = index > 0
                     ? ((total - prevTotal) / prevTotal) * 100
                     : 0;
 
                 Color growthColor;
                 if (growth > 0) {
-                  growthColor = Colors.purple[700]!;
+                  growthColor = isDark
+                      ? Colors.purple[300]!
+                      : Colors.purple[700]!;
                 } else if (growth < 0) {
-                  growthColor = Colors.red[700]!;
+                  growthColor = isDark ? Colors.red[300]! : Colors.red[700]!;
                 } else {
-                  growthColor = Colors.grey[700]!;
+                  growthColor = isDark ? Colors.grey[400]! : Colors.grey[700]!;
                 }
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: isDark ? Colors.grey[800] : Colors.grey[50],
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 8,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -75,7 +93,11 @@ class BuffaloGrowthGraph extends StatelessWidget {
                           width: 72,
                           child: Text(
                             data['year'].toString(),
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -84,27 +106,59 @@ class BuffaloGrowthGraph extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     '${formatNumber(total)} Buffaloes',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
                                   ),
                                   Text(
                                     '(${formatNumber(producing)} producing)',
-                                    style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.grey[400]
+                                          : Colors.grey,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 6,
+                                      horizontal: 12,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: growth > 0 ? Colors.purple[50] : growth < 0 ? Colors.red[50] : Colors.grey[100],
+                                      color: growth > 0
+                                          ? (isDark
+                                                ? Colors.purple[900]
+                                                : Colors.purple[50])
+                                          : growth < 0
+                                          ? (isDark
+                                                ? Colors.red[900]
+                                                : Colors.red[50])
+                                          : (isDark
+                                                ? Colors.grey[700]
+                                                : Colors.grey[100]),
                                       borderRadius: BorderRadius.circular(18),
                                     ),
                                     child: Text(
                                       index > 0
-                                          ? '${growth > 0 ? '↗ ' : growth < 0 ? '↘ ' : ''}${growth.abs().toStringAsFixed(1)}%'
+                                          ? '${growth > 0
+                                                ? '↗ '
+                                                : growth < 0
+                                                ? '↘ '
+                                                : ''}${growth.abs().toStringAsFixed(1)}%'
                                           : '',
-                                      style: TextStyle(color: growthColor, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        color: growthColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -115,7 +169,9 @@ class BuffaloGrowthGraph extends StatelessWidget {
                                   Container(
                                     height: 28,
                                     decoration: BoxDecoration(
-                                      color: Colors.grey[200],
+                                      color: isDark
+                                          ? Colors.grey[700]
+                                          : Colors.grey[200],
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
@@ -124,14 +180,23 @@ class BuffaloGrowthGraph extends StatelessWidget {
                                     child: Container(
                                       height: 28,
                                       decoration: BoxDecoration(
-                                        gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)]),
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFF7C3AED),
+                                            Color(0xFF4F46E5),
+                                          ],
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       padding: const EdgeInsets.only(right: 12),
                                       alignment: Alignment.centerRight,
                                       child: Text(
                                         '${percentage.toStringAsFixed(0)}% of peak',
-                                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),

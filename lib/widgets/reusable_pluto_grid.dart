@@ -24,6 +24,8 @@ class ReusablePlutoGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SizedBox(
       height: height,
       child: PlutoGrid(
@@ -32,8 +34,24 @@ class ReusablePlutoGrid extends StatelessWidget {
           style: PlutoGridStyleConfig(
             rowHeight: rowHeight,
             gridBorderRadius: BorderRadius.circular(8),
-            gridBorderColor: Colors.grey[300]!,
+            gridBorderColor: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+            gridBackgroundColor: isDark ? Colors.grey[850]! : Colors.white,
+            rowColor: isDark ? Colors.grey[850]! : Colors.white,
             enableGridBorderShadow: true,
+            // Ensure text is visible by default depending on theme
+            cellTextStyle: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+              fontSize: 14,
+            ),
+            columnTextStyle: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+            iconColor: isDark ? Colors.white70 : Colors.black87,
+            menuBackgroundColor: isDark ? Colors.grey[800]! : Colors.white,
+            oddRowColor: isDark ? Colors.grey[800]! : Colors.grey[50]!,
+            evenRowColor: isDark ? Colors.grey[850]! : Colors.white,
           ),
           columnSize: PlutoGridColumnSizeConfig(
             autoSizeMode: PlutoAutoSizeMode.scale,
@@ -85,9 +103,7 @@ class PlutoColumnBuilder {
   }) {
     return (ctx) {
       return Container(
-        decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.transparent,
-        ),
+        decoration: BoxDecoration(color: backgroundColor ?? Colors.transparent),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -119,9 +135,7 @@ class PlutoColumnBuilder {
   }) {
     return (ctx) {
       return Container(
-        decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.transparent,
-        ),
+        decoration: BoxDecoration(color: backgroundColor ?? Colors.transparent),
         padding: const EdgeInsets.all(8),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
