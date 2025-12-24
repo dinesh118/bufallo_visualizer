@@ -1,4 +1,4 @@
-name: Build and Push Flutter Web Docker Image
+name: Build, Push and Deploy Flutter Web App
 
 on:
   push:
@@ -28,3 +28,26 @@ jobs:
     - name: Push Docker image to Docker Hub
       run: |
         docker push ${{ secrets.DOCKER_USERNAME }}/flutter-web-app:latest
+
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy to Google VM using SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        script: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/flutter-web-app:latest
+
+          docker stop flutter-web || true
+          docker rm flutter-web || true
+
+          docker run -d \
+            --name flutter-web \
+            -p 80:80 \
+            ${{ secrets.DOCKER_USERNAME }}/flutter-web-app:latest
